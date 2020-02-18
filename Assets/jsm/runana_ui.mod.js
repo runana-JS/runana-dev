@@ -2,7 +2,7 @@ import * as RE from './runana_ide.mod.js'
 import * as JS from './virtualjoystick.js'
 import * as ConstUI from "../css/const_ui_css.js" ;
 
-var VERSION='v 0.5.0.0';
+var VERSION='v 0.5.1.0';
 var _container=document.getElementById('game_wrapper');
 var canvas=RcreateElement(_container,ConstUI.canvas);
 var runana_ide=new RE.Runana_IDE({container:canvas,version:VERSION});
