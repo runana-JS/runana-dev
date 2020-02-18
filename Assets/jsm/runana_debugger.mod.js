@@ -6,7 +6,7 @@ var console_log='';
 export class Runana_Debugger{
   constructor(opts){
     opts			= opts			|| {};
-    this.database  = opts.database || new DBC.DataSet();
+    this.database  = opts.database || DBC.DataBase();
     this.parent =opts.parent || null;
 
     this.input=null;
@@ -14,7 +14,8 @@ export class Runana_Debugger{
   start(database){
     this.database=database;
     console_log='';
-    var debugDataS=new _debugDataS(database.sprite[0].dataS[0]);
+    let sprite=database.sprite[database.selectedSprite];
+    var debugDataS=new _debugDataS(sprite.dataS[sprite.selectedDataSet]);
     debugDataS.exe();
     return console_log;
   }
@@ -32,9 +33,10 @@ class _debugDataS{
   caldir(num){
     const div=[[0,1,0],[1,0,0],[0,5,0],[5,0,0],[0,0,1],[0,0,5]]
     let res=[-1,-1,-1,-1,-1,-1];
+    let dir=this.dataS.dataE[num];
     for(let i=0;i<6;++i){
       const intD=(1<<i);
-      if ((this.dataS.dataU[num].dir&intD)==intD){
+      if ((dir&intD)>0){
         res[i]=(((num%6)+div[i][0])%6)+((parseInt(num/6)%6+div[i][1])%6)*6+((parseInt(num/36)+div[i][2])%6)*36;
       }
     }
@@ -42,45 +44,48 @@ class _debugDataS{
   }
   exe(){
     try{
-      for (let key in dataS.dataU){  
-        switch(Number(dataS.dataU[key].type)){
+      let dataU=this.dataS.dataU;
+      for (let key in dataU){  
+        switch(Number(dataU[key].type)){
           case  3101:   //mark
-            this.mark.push({pos:key,name:dataS.dataU[key].val[0]});
+            this.mark.push({pos:key,name:dataU[key].val[0]});
             break;
           case  3302:   //start
             this.que.push({from:key,to:key,tof:true,wait:0});
             break;
           case  3000:   //val          
-            eval(parseVar(dataS.dataU[key].val[0]+"="+dataS.dataU[key].val[1]));
+            eval(parseVar(dataU[key].val[0]+"="+dataU[key].val[1]));
             break;
         }
       }
       while(this.que.length>0){
         let d=this.que.shift();
-        if(!DBC.DataExist4DS(this.dataS,d.to))continue;
         const to=d.to;
         const from=d.from;
         let tof=d.tof;
         let wait=d.wait;
-        const dtype=Number(this.dataS.dataU[to].type);
-        if(dtype==0)continue;
-        if((tof==false) && !(dtype==1302 ||(dtype==1)))continue;
-        if((tof==true) && (dtype==1302))continue;
-        tof=this.exeDataU(to,tof);
-        if (dtype==1 ){
-          if(wait==0) {
-            wait=parseInt(this.dataS.dataU[to].val[0]);
-          }else{
-            wait-=1;
-          }
-          if(wait>0){
-            this.que.push({from:from,to:to,tof:tof,wait:wait});
-            continue;
+        if(dataU[d.to]){
+          const dtype=Number(dataU[to].type);
+          if((tof==false) && !(dtype==1302 ||(dtype==1)))continue;
+          if((tof==true) && (dtype==1302))continue;
+          tof=this.exeDataU(to,tof);
+          if (dtype==1 ){
+            if(wait==0) {
+              wait=parseInt(dataU[to].val[0]);
+            }else{
+              wait-=1;
+            }
+            if(wait>0){
+              this.que.push({from:from,to:to,tof:tof,wait:wait});
+              continue;
+            }
           }
         }
-        const newdir=this.caldir(to);
-        for(let i=0;i<6;++i){
-          if ((newdir[i]>=0) && (newdir[i]!=from))this.que.push({from:to,to:newdir[i],tof:tof,wait:wait});
+        if(this.dataS.dataE[to]){
+          const newdir=this.caldir(to);
+          for(let i=0;i<6;++i){
+            if ((newdir[i]>=0) && (newdir[i]!=from))this.que.push({from:to,to:newdir[i],tof:tof,wait:wait});
+          }  
         }
       }   
     }catch(e){

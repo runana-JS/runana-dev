@@ -2,6 +2,8 @@ import * as DBC from "./DBController.mod.js";
 import * as Prefabs from "./Prefabs.mod.js";
 import * as PanelC from "./PanelController.mod.js" ;
 import * as ConstE from "../css/const_editor_css.js" ;
+import * as ConstCL from "../css/const_cube_list.js" ;
+
 
 /*  Constance */
 const colors=['#808080', 'blue','red','green','yellow','white']; 
@@ -11,7 +13,7 @@ export class Editor{
   constructor(opts) {
     opts			= opts			|| {};
     this._container =opts.container || document.body;
-    this.dataset  = opts.dataset || new DBC.DataSet();
+    this.dataset  = opts.dataset || DBC.DataSet();
     this.texture = opts.texture || new THREE.TextureLoader().load( "./textures/basic.png" );
     this.parent =opts.parent || null;
     
@@ -101,13 +103,13 @@ export class Editor{
       this.parent.OnClickESC();
     }else{
       if(this.flgCE=='Cube'){
-        if(this.dataset.dataU[this.selectedPosition]){
+        if(this.dataset.dataU[String(this.selectedPosition)]){
           this._openMenu('editCube');
         }else{
           this._openMenu('newCube');
         } 
       }else{
-        if(this.dataset.dataE[this.selectedPosition]){
+        if(this.dataset.dataE[String(this.selectedPosition)]){
           this._openMenu('editEdge');
         }else{
           this._openMenu('newEdge');
@@ -175,12 +177,11 @@ export class Editor{
     event.preventDefault();
     clearInterval(this.timer);
     if(this.dragObj!=null&&this.selectedPosition!=this.tempPosition){ //drop method
-      if(DBC.GetDataUnit4DS(this.dataset,this.tempPosition)==null){
+      if(!this.dataset.dataU[String(this.tempPosition)]){
         this.dragObj.pos=this.tempPosition;
-        let dataU=DBC.GetDataUnit4DS(this.dataset,this.selectedPosition);
-        dataU.pos=this.tempPosition;
-        DBC.SetDataUnit4DS(this.dataset,dataU);
-        DBC.EraseDataUnit4DS(this.dataset,this.selectedPosition)
+        let dataU=this.dataset.dataU[String(this.selectedPosition)];
+        this.dataset.dataU[String(this.tempPosition)]=dataU;
+        delete this.dataset.dataU[String(this.selectedPosition)]
         this.selectedPosition=this.tempPosition; 
         this._setSelectedTray(); 
       }else{ //cancel
@@ -252,13 +253,13 @@ export class Editor{
           break;
         case 'button_B':
           if(this.flgCE=='Cube'){
-            if(this.dataset.dataU[this.selectedPosition]){
+            if(this.dataset.dataU[String(this.selectedPosition)]){
               this._openMenu('editCube');
             }else{
               this._openMenu('newCube');
             } 
           }else{
-            if(this.dataset.dataE[this.selectedPosition]){
+            if(this.dataset.dataE[String(this.selectedPosition)]){
               this._openMenu('editEdge');
             }else{
               this._openMenu('newEdge');
@@ -290,7 +291,6 @@ export class Editor{
   }
 
   _onClickMenuDo(value){
-    console.log(value);
     let num = -1;
     for(let i in ConstE.CaptionMenu){
       if(value==ConstE.CaptionMenu[i])num=i;
@@ -306,34 +306,30 @@ export class Editor{
       case 2://New Interface
       case 3://New variable
       case 4://New Ext        
-        let dataU=new DBC.DataUnit({pos:this.selectedPosition,type:num});
-        this.dataset.dataU [dataU.pos]=dataU;
+        let dataU=DBC.DataUnit({type:num*1000});
+        //this.dataset.dataU [this.selectedPosition]=dataU;
         this._openPanelCube(dataU);
         return;
       case 5: //Paste Cube
-        if(this.copyDataU!=null){
-          this.copyDataU.pos=this.selectedPosition;
-          DBC.SetDataUnit4DS(this.dataset,this.copydataU);
-        }  
+        if(this.copyDataU!=null) this.dataset.dataU[String(this.selectedPosition)]=this.copydataU;
         break;
       case 8://New Edge
-        let dataE=new DBC.DataEdge({pos:this.selectedPosition});
-        this.dataset.dataE [dataE.pos]=dataE;
-        this._openPanelEdge(dataE);
+        this.dataset.dataE[this.selectedPosition]=0;
+        this._openPanelEdge(0);
         return;
       case 11: // edit Cube
-        this._openPanelCube(this.dataset.dataU[this.selectedPosition]);
+        this._openPanelCube(this.dataset.dataU[String(this.selectedPosition)]);
         return;
       case 12: // cut Cube
-        this.copyDataU=DBC.GetDataUnit4DS(this.dataset,this.selectedPosition);
-        DBC.EraseDataUnit4DS(this.dataset,this.selectedPosition);
+        this.copyDataU=this.dataset.dataU[String(this.selectedPosition)];
+        delete this.dataset.dataU[String(this.selectedPosition)];
         break;
       case 13: //copy Cube
-        this.copyDataU= DBC.GetDataUnit4DS(this.dataset,this.selectedPosition);
-        break;
+      this.copyDataU=this.dataset.dataU[String(this.selectedPosition)];
+      break;
       case 16: // edit Edge
         //`Todo
-        this._openPanelEdge(this.dataset.dataE[this.selectedPosition]);
+        this._openPanelEdge(this.dataset.dataE[String(this.selectedPosition)]);
         return;
       case 6:
       case 9:
@@ -380,10 +376,10 @@ export class Editor{
   _viewData(flg){
     if(flg){
       let text="";
-      if(this.dataset.dataU[this.tempPosition]){
-        const dataU=this.dataset.dataU[this.tempPosition];
-        text='pos : '+dataU.pos+'\n';
-        text+='name: '+dataU.name+'\n';
+      if(this.dataset.dataU[String(this.tempPosition)]){
+        const dataU=this.dataset.dataU[String(this.tempPosition)];
+        text='pos : '+this.tempPosition+'\n';
+        text+='name: '+ConstCL.cubelist[String(dataU.type)]+'\n';
         text+='type: '+dataU.type+'\n';
         for(let j in dataU.val){
           text+='val : '+dataU.val[j]+'\n';
@@ -409,39 +405,36 @@ export class Editor{
     const lnum=this.dataset.selectedLayer;
     if(this.flgCE=='Cube'){
       for (let key in this.dataset.dataU){
-        const dataU = Object.assign({},this.dataset.dataU[key]);
-        if((dataU.pos>=36*lnum)&&(dataU.pos<36*lnum+36)){
-          this._createCube(dataU);   
+        const dataU = this.dataset.dataU[key];
+        if((parseInt(key)>=36*lnum)&&(parseInt(key)<36*lnum+36)){
+          this._createCube(parseInt(key),dataU);   
         }
       }  
     }
     for (let key in this.dataset.dataE){
-      const dataE = Object.assign({},this.dataset.dataE[key]);
-      if((dataE.pos>=36*lnum)&&(dataE.pos<36*lnum+36)){
-        this._createEdge(dataE);   
+      if((parseInt(key)>=36*lnum)&&(parseInt(key)<36*lnum+36)){
+        this._createEdge(parseInt(key),this.dataset.dataE[key]);   
       }
     }
     this._render();
     this._setSelectedTray();
   }
 // create cube
-  _createCube(dataU){
-    const pos=dataU.pos;
+  _createCube(pos1,dataU){
     const num=Math.floor(dataU.type/1000);
     let newObj;
     if(num==1)newObj=new Prefabs.Cube({texture:this.texture});
     if(num==2)newObj=new Prefabs.Capsule({texture:this.texture});
     if(num==3)newObj=new Prefabs.Sphere({texture:this.texture});
     if(num==4)newObj=new Prefabs.ExtObj();
-    newObj.pos=pos;
-    newObj.position.copy(calc3DPosition(pos));
+    newObj.pos=pos1;
+    newObj.position.copy(calc3DPosition(pos1));
     newObj.material.color.set(colors[Math.floor(dataU.type/100)%10]);
     this.L.add(newObj);
     return newObj;
   }
 
-  _createEdge(dataE){
-    const pos=dataE.pos;
+  _createEdge(pos,dir){
     let newObj=new Prefabs.Edge();
     newObj.pos=pos;
     newObj.position.copy(calc3DPosition(pos));
@@ -449,7 +442,7 @@ export class Editor{
     for(let i=0;i<6;++i){
       let item = newObj.children.find( (v) => v.class == ConstE.strEdge[i]);
       item.visible=true;
-      if((dataE.dir&(1<<i))==0)item.visible=false;
+      if((dir&(1<<i))==0)item.visible=false;
     }
     return newObj;
   }
@@ -483,13 +476,13 @@ export class Editor{
   _openPanelCube(dataU){
     while(this._container.children.length>0)this._container.removeChild(this._container.children[0]);
     this._container.appendChild(this.panel);
-    this.panelController.OpenPanelCube(Object.assign({},dataU));
+    this.panelController.OpenPanelCube(dataU);
   }
 
-  _openPanelEdge(dataE){
+  _openPanelEdge(dir){
     while(this._container.children.length>0)this._container.removeChild(this._container.children[0]);
     this._container.appendChild(this.panel);
-    this.panelController.OpenPanelEdge(Object.assign({},dataE));
+    this.panelController.OpenPanelEdge(dir);
   }
 
   GetDataBase(){
@@ -551,11 +544,11 @@ export class Editor{
     this._setupLayer();
   }
 
-  SubmitPanel(dataU){
+  SubmitPanel(opts){
     if(this.flgCE=='Cube'){
-      this.dataset.dataU[dataU.pos]=dataU;
+      this.dataset.dataU[String(this.selectedPosition)]=opts;
     }else{
-      this.dataset.dataE[dataU.pos]=dataU;
+      this.dataset.dataE[String(this.selectedPosition)]=opts;
     }
     this._container.removeChild(this.panel);
     this._container.appendChild(this.canvas);

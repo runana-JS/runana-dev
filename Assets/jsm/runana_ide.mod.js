@@ -9,7 +9,7 @@ export class Runana_IDE{
   constructor(opts) {
     opts			= opts			|| {};
     this._container =opts.container || document.body;
-    this.database  = opts.database || new DBC.DataBase();
+    this.database  = opts.database || DBC.DataBase();
     this.texture = opts.texture || new THREE.TextureLoader().load( "./textures/basic.png" );    
     this.parent =opts.parent || null;
     this.version=opts.version || 'undefine';
@@ -80,8 +80,8 @@ export class Runana_IDE{
   ExitFirstPage(jsontext){
     while(this._container.children.length>0)this._container.removeChild(this._container.children[0]);
     this.database=DBC.OpenDB(jsontext);
-    DBC.SetDnum(this.database,0);
-    this.editorController._setDataSet(DBC._getDataSet(this.database));
+    const sprite=this.database.sprite[this.database.selectedSprite];
+    this.editorController._setDataSet(sprite.dataS[sprite.selectedDataSet]);
     this.editorController._setupLayer();
     this._container.appendChild(this.editor);
     this.editorController.OnResize();

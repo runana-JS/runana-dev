@@ -1,15 +1,17 @@
 import * as DBC from "./DBController.mod.js";
 import * as ConstP from "../css/const_panel_css.js" ;
+import * as ConstCL from "../css/const_cube_list.js" ;
 
 
 export class Panel{
   constructor(opts){
     opts			= opts			|| {};
     this._container =opts.container || document.body;
-    this.database  = opts.database || new DBC.DataBase();
+    this.database  = opts.database || DBC.DataBase();
     this.parent =opts.parent || null;
-    this.panelDataU =opts.dataU || new DBC.DataUnit();
-    this.panelDataE =opts.dataE || new DBC.DataEdge();
+    this.pos = opts.pos || 0;
+    this.panelDataU =opts.dataU || DBC.DataUnit();
+    this.dir =opts.dir || 0;
     this.version = opts.version || 'undefine';
 
     this.selectedPosition=0;
@@ -50,10 +52,9 @@ export class Panel{
         break;
       case 'commonOK': //OK
         if(this.parent.flgCE=='Edge'){//edge
-          this.parent.SubmitPanel(this.panelDataE);
+          this.parent.SubmitPanel(this.dir);
         } else if(this.panelDataU.type<4000){ //cube
           const select=this._container.querySelector("[name='select']");
-          this.panelDataU.name=select.options[select.selectedIndex].text;
           this.panelDataU.type=select.options[select.selectedIndex].value;
           let newval=[];
           const input1=this._container.querySelector("[name='input1']");
@@ -64,7 +65,7 @@ export class Panel{
           this.parent.SubmitPanel(this.panelDataU);
         }else{ //ext
           const select=this._container.querySelector("[name='selectext']");
-          this.panelDataU.name=select.options[select.selectedIndex].text;
+          this.panelDataU.val[1]=select.options[select.selectedIndex].text;
           this.panelDataU.type=4000;
           this.parent.SubmitPanel(this.panelDataU);
         }
@@ -123,10 +124,10 @@ export class Panel{
         const prestr=["N","E","S","W","U","D"];
         let str=prestr[cnum];
         const bnum=(1<<cnum);
-        if((this.panelDataE.dir&bnum)>0){
-          this.panelDataE.dir-=bnum;
+        if((this.dir&bnum)>0){
+          this.dir-=bnum;
         } else{
-          this.panelDataE.dir+=bnum;
+          this.dir+=bnum;
           str+=" out";
         }
         obj.value=str;
@@ -198,15 +199,13 @@ export class Panel{
       let cubetype=Math.floor(dataU.type/1000);
       let index=0;
       let selectedindex=0;
-      const cfgDataSet=ConstP.cfgDataSet;
-
-      for (let i in cfgDataSet.cubelist) {
-        if (Math.floor(cfgDataSet.cubelist[i].type/1000)==cubetype) {
+      for (let key in ConstCL.cubelist) {
+        if (Math.floor(parseInt(key)/1000)==cubetype) {
           let option = document.createElement("option");
-          option.text = cfgDataSet.cubelist [i].name;
-          option.value = cfgDataSet.cubelist [i].type;
+          option.text = ConstCL.cubelist [key].name;
+          option.value = parseInt(key);
           select.appendChild(option);
-          if(dataU.type == cfgDataSet.cubelist [i].type)selectedindex=index;
+          if(dataU.type == parseInt(key))selectedindex=index;
           ++index;
         }
       }
@@ -218,10 +217,10 @@ export class Panel{
       let select =RcreateElement(panel,ConstP.selectext);
       const sprite = DBC.GetSprite(this.parent.GetDataBase());
       ///Caution make select without root i=0
-      for(let i in sprite.dataS){
+      for(let key in sprite.dataS){
         let option = document.createElement("option");
-        option.text = sprite.dataS[i].name;
-        option.value = i;
+        option.text = key;
+        option.value = key;
         select.appendChild(option);
         if(option.text==dataU.name)select.selectedIndex=i;
       }  
@@ -234,11 +233,11 @@ export class Panel{
     this._setSelectedPanel(0);  
   }
   //Oopen panel for Edge
-  OpenPanelEdge(dataE){
+  OpenPanelEdge(dir){
     while(this._container.children.length)this._container.removeChild(this._container.children[0]);
     let panel = RcreateElement(this._container,ConstP.panel);
     let Title= RcreateElement(panel,ConstP.panelTitle);
-    this.panelDataE=dataE;
+    this.dir=dir;
   
     Title.textContent='Edge Editor';
     const edgeConfig=RcreateElement(panel,ConstP.edgeConfig);
@@ -255,7 +254,7 @@ export class Panel{
     for(let i=0;i<6;++i){//NESWUD
       let str=prestr[i];
       const bnum=(1<<i);
-      if((this.panelDataE.dir&bnum)>0)str+=" out";
+      if((this.dir&bnum)>0)str+=" out";
       edge[i].value=str;
     }
     const commonB=RcreateElement(panel,ConstP.commonB);
@@ -323,7 +322,7 @@ export class Panel{
     input2.style.display='none';
     let select=this._container.querySelector("[name='select']");		
     
-    let varcap= ConstP.cfgDataSet.cubelist.find((v)=>v.type== select.value).varcap;
+    let varcap= ConstCL.cubelist[select.value].varcap;
     if(varcap.length>0){
       this.cap1.style.display='block';
       input1.style.display='block';
@@ -356,10 +355,10 @@ export class Panel{
     let select=this._container.querySelector("[name='extselect']");
     while(select.options.length>0)select.removeChild(select.options[0]);
     const sprite = DBC.GetSprite(this.parent.GetDataBase());
-    for(let i in sprite.dataS){
+    for(let key in sprite.dataS){
       let option = document.createElement("option");
-      option.text = sprite.dataS[i].name;
-      option.value = i;
+      option.text = key;
+      option.value = key;
       select.appendChild(option);
     }
   }

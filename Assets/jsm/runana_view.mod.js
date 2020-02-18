@@ -228,11 +228,10 @@ export class Viewer{
     this._clearAll();
     for (let key in this.dataset.dataU){
       const dataU = Object.assign({},this.dataset.dataU[key]);
-      this._createCube(dataU);   
+      this._createCube(parseInt(key),dataU);   
     }  
     for (let key in this.dataset.dataE){
-      const dataE = Object.assign({},this.dataset.dataE[key]);
-      this._createEdge(dataE);   
+      this._createEdge(parseInt(key),this.dataset.dataE[key]);   
     }
     this.OnResize();
   }
@@ -245,23 +244,21 @@ export class Viewer{
   }
 
   // create cube
-  _createCube(dataU){
-    const pos=dataU.pos;
+  _createCube(pos1,dataU){
     const num=Math.floor(dataU.type/1000);
     let newObj;
     if(num==1)newObj=new Prefabs.Cube({texture:this.texture});
     if(num==2)newObj=new Prefabs.Capsule({texture:this.texture});
     if(num==3)newObj=new Prefabs.Sphere({texture:this.texture});
     if(num==4)newObj=new Prefabs.ExtObj();
-    newObj.pos=pos;
-    newObj.position.copy(calc3DPosition(pos));
+    newObj.pos=pos1;
+    newObj.position.copy(calc3DPosition(pos1));
     newObj.material.color.set(colors[Math.floor(dataU.type/100)%10]);
-    this.L[Math.floor(pos/36)].add(newObj);
+    this.L[Math.floor(pos1/36)].add(newObj);
     return newObj;
   }
 
-  _createEdge(dataE){
-    const pos=dataE.pos;
+  _createEdge(pos,dir){
     let newObj=new Prefabs.Edge();
     newObj.pos=pos;
     newObj.position.copy(calc3DPosition(pos));
@@ -269,7 +266,7 @@ export class Viewer{
     for(let i=0;i<6;++i){
       let item = newObj.children.find( (v) => v.class == ConstV.strEdge[i]);
       item.visible=true;
-      if((dataE.dir&(1<<i))==0)item.visible=false;
+      if((dir&(1<<i))==0)item.visible=false;
     }
     return newObj;
   }
